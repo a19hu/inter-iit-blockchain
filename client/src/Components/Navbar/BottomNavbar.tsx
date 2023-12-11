@@ -264,7 +264,6 @@ const BottomNavbar: React.FC<Props> = ({
         />
       </div>
 
-      <PiCoinVertical className="tip-artist" />
       {liked ? (
         <>
           <FcLike className="filled-heart-button" onClick={()=>{deleteLike(songID)}} />

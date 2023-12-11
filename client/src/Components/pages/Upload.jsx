@@ -165,6 +165,7 @@ const Upload = () => {
                 value=""
                 id="Free"
                 onChange={handleRadioChange}
+                required
               />
               Free
               <input
@@ -172,6 +173,7 @@ const Upload = () => {
                 name="Amount"
                 value=""
                 id="Amount"
+                required
                 onChange={handleRadioChange}
               />
               Amount
@@ -181,6 +183,7 @@ const Upload = () => {
                   name="Amount"
                   placeholder="Enter amount"
                   onChange={handleInputChange}
+                  required
                 />
               ) : null}
               <br />
