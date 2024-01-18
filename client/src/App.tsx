@@ -36,6 +36,17 @@ function App() {
   const [photoUrlArray, setPhotourlArray] = useState<string[]>([]);
 
   const [songArtist, setSongArtist] = useState<string | null>(null);
+  const { account, signAndSubmitTransaction } = useWallet();
+  const module_address = process.env.REACT_APP_MODULE_ADDRESS;
+  const provider = new Provider(Network.DEVNET);
+  type EntryFunctionId = string;
+  type MoveType = string;
+  type ViewRequest = {
+    function: EntryFunctionId;
+    type_arguments: Array<MoveType>;
+    arguments: Array<any>;
+  };
+  // const checkUser()
   const handlePlaySong = (
     SongID : number,
     url: string,

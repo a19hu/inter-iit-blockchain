@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { FaPlay } from "react-icons/fa";
 import { LiaCoinsSolid } from "react-icons/lia";
 import deva from "../images/deva-deva.jpg";
@@ -50,12 +50,60 @@ const SongCard: React.FC<Props> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [isPurchased, setIsPurchased] = useState(false);
+  const [isPurchased, setIsPurchased] = useState(true);
+  const[isUSer,setIsUser]=useState(false);
   const [isPaid, setIsPaid] = useState(false);
+  const { account, signAndSubmitTransaction } = useWallet();
+  const provider = new Provider(Network.DEVNET);
   const module_address = process.env.REACT_APP_MODULE_ADDRESS;
+  type EntryFunctionId = string;
+  type MoveType = string;
+  type ViewRequest = {
+    function: EntryFunctionId;
+    type_arguments: Array<MoveType>;
+    arguments: Array<any>;
+  };
 
+  useEffect(() => {
+    checkIfUSer();
+    if(isUSer){
+      checkIfPurchased();
+    }
+}
+, [SongID,isUSer])
+const checkIfUSer = async () => {
+  const payload: ViewRequest = {
+    function: `${module_address}::Profile::isUser`,
+    type_arguments: [],
+    arguments: [account?.address],
+  };
+  try {
+    const response = await provider.view(payload);
+    let isUser = JSON.parse(JSON.stringify(response));
+    console.log("isUser", isUser[0]);
+    setIsUser(isUser[0]);
+  } catch (error: any) {
+    console.log("error", error);
+    return false;
+  }
+};
 
+// };
+const checkIfPurchased = async()=>{
+  if (!account) return [];
+  const payload: ViewRequest = {
+    function: `${module_address}::Profile::isUserPurchasedMain`,
+    type_arguments: [],
+    arguments: [account?.address,SongID],
+  };
+  const response=await provider.view(payload);
+  const res=JSON.parse(JSON.stringify(response))
+  console.log(res[0]);
+  if(res[0]===true){
+    setIsPurchased(false);
+  }
 
+}
 
   const handleCardClick = () => {
     if (Purchase_Status) {
@@ -77,9 +125,12 @@ const SongCard: React.FC<Props> = ({
           <div className="playlist-image">
             
             <img src={PhotoUrl} alt="song-image" className="card-image" />
-            <center className="show-button">
-              <FaPlay className="play-button" onClick={playSong} />
-            </center>
+            {!isPurchased?(
+                      <center className="show-button">
+                      <FaPlay className="play-button" onClick={playSong} />
+                    </center>
+            ):(null)}
+    
           </div>
         </>
       ) : (
@@ -96,21 +147,21 @@ const SongCard: React.FC<Props> = ({
           <div className="song-details">Artist : {ArtistName}</div>
           <div className="song-details">Album : {AlbumName}</div>
         </div>
-        <div className={Purchase_Status == true ? "purchase" : "not-purchase"}>
+        <div className={isPurchased == true ? "purchase" : "not-purchase"}>
           <LiaCoinsSolid
             onClick={handleCardClick}
             className={
-              Purchase_Status == true ? "image-show" : "image-not-show"
+              isPurchased == true ? "image-show" : "image-not-show"
             }
           />
           <div
-            className={Purchase_Status == false ? "show_paid" : "not_show_paid"}
+            className={isPurchased == false ? "show_paid" : "not_show_paid"}
           >
             Paid
           </div>
           <div
             className={
-              Purchase_Status == true ? "show_price" : "not-show-price"
+              isPurchased == true ? "show_price" : "not-show-price"
             }
           >
             {Song_Price}

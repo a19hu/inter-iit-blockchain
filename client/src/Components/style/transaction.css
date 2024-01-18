@@ -1,7 +1,7 @@
 .Transaction-card{
     width: calc(100%-20%);   
     background: linear-gradient(109.6deg, rgba(21, 21, 21, 0.418) 11.2%, rgba(82, 70, 70, 0.44) 78.9%);
-    height: 90px;
+    height: 100px;
     /* border: 1px white solid; */
     display: flex;
     column-gap: 5px;

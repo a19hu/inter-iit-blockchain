@@ -9,7 +9,7 @@ import { useWallet } from "@aptos-labs/wallet-adapter-react";
 
 interface HomeProps {
   onPlaySong: (
-    SongID:number,
+    SongID: number,
     url: string,
     songName: string,
     photourl: string,
@@ -42,12 +42,15 @@ const Home: React.FC<HomeProps> = ({ onPlaySong, onPlaySongArray }) => {
   const provider = new Provider(Network.DEVNET);
   const module_address = process.env.REACT_APP_MODULE_ADDRESS;
   //   console.log(module_address);
-
+  const [isUSer, setIsUser] = useState(false);
   const [transactionID, setTransactionID] = useState(0);
   const [topSongs, setTopSongs] = useState();
   const [isTopSongsFetched, setIsTopSongsFetched] = useState(false);
   const [isRecentSongsFetched, setIsRecentSongsFetched] = useState(false);
   const [isRandomSongsFetched, setIsRandomSongsFetched] = useState(false);
+  const [accountHasResource, setAccountHasResource] = useState(false);
+  const [accountHasPlaylist, setAccountHasPlaylist] = useState(false);
+  const [accountHasUser, setAccountHasUser] = useState(false);
   const [randomSongs, setRandomSongs] = useState();
   const [recentSongs, setRecentSongs] = useState();
 
@@ -58,21 +61,21 @@ const Home: React.FC<HomeProps> = ({ onPlaySong, onPlaySongArray }) => {
     type_arguments: Array<MoveType>;
     arguments: Array<any>;
   };
+  useEffect(() => {
+    checkIfUSer();
+  }, [account?.address]);
 
-
-useEffect(() => {
-    if(recentSongs && recentSongs[0]){
-        sendRecentSongs(recentSongs);
+  useEffect(() => {
+    if (recentSongs && recentSongs[0]) {
+      sendRecentSongs(recentSongs);
     }
-}
-, [recentSongs])
+  }, [recentSongs]);
 
-useEffect(() => {
-    if(recentSongs && recentSongs[0]){
-        sendRecentSongs(recentSongs);
+  useEffect(() => {
+    if (recentSongs && recentSongs[0]) {
+      sendRecentSongs(recentSongs);
     }
-}
-, [recentSongs])
+  }, [recentSongs]);
 
   useEffect(() => {
     if (account || !isTopSongsFetched) {
@@ -88,6 +91,92 @@ useEffect(() => {
       setIsRecentSongsFetched(true);
     }
   }, [account, isTopSongsFetched, isRandomSongsFetched, isRecentSongsFetched]);
+  const createResource = async () => {
+    if (!account) return [];
+    // setTransactionInProgress(true);
+    console.log("entered add resource", account.address);
+    const payload1 = {
+      type: "entry_function_payload",
+      function: `${module_address}::Profile::create_resource`,
+      type_arguments: [],
+      arguments: [],
+    };
+    console.log("payload 1", payload1);
+    try {
+      // sign and submit transaction to chain
+      const getResourceDetails = await provider.getAccountResource(
+        account.address,
+        `${module_address}::Profile::Playlists_Table`
+      );
+      // await provider.waitForTransaction(response.hash);
+      setAccountHasResource(true);
+      console.log("Completed adding resource");
+    } catch (error: any) {
+      // setAccountHasResource(false);
+      const response = await signAndSubmitTransaction(payload1);
+      console.log("response", response);
+      await provider.waitForTransaction(response.hash);
+
+      const getResourceDetails = await provider.getAccountResource(
+        account.address,
+        `${module_address}::Profile::Playlists_Table`
+      );
+      setAccountHasResource(true);
+      console.log("ERROR-----", error);
+    }
+    // finally {
+    //     setTransactionInProgress(false);
+    // }
+  };
+  const checkIfUSer = async () => {
+    const payload: ViewRequest = {
+      function: `${module_address}::Profile::isUser`,
+      type_arguments: [],
+      arguments: [account?.address],
+    };
+    try {
+      const response = await provider.view(payload);
+      let isUser = JSON.parse(JSON.stringify(response));
+      console.log("isUser", isUser[0]);
+      setAccountHasUser(isUser[0]);
+    } catch (error: any) {
+      console.log("error", error);
+      return false;
+    }
+  };
+  const createUser = async () => {
+    if (!account) return [];
+    // setTransactionInProgress(true);
+    console.log("entered create User", account.address);
+    const payload = {
+      type: "entry_function_payload",
+      function: `${module_address}::Profile::create_user`,
+      type_arguments: [],
+      arguments: [],
+    };
+    try {
+      const getResourceDetails = await provider.getAccountResource(
+        account.address,
+        `${module_address}::Profile::User`
+      );
+      setAccountHasUser(true);
+      console.log(accountHasUser);
+    } catch (error: any) {
+      const response = await signAndSubmitTransaction(payload);
+      console.log("response", response);
+      await provider.waitForTransaction(response.hash);
+      const getResourceDetails = await provider.getAccountResource(
+        account.address,
+        `${module_address}::Profile::User`
+      );
+      setAccountHasUser(true);
+      console.log(accountHasUser);
+    }
+  };
+  useEffect(() => {
+    if (account?.address) createUser();
+    if (accountHasUser) createResource();
+  }, [accountHasUser, account?.address]);
 
   const fetchTopSongs = async () => {
     if (!account) return [];
@@ -127,10 +216,10 @@ useEffect(() => {
     sendRecentSongs(recentSongs);
     console.log("Recent Songs : ", recentSongsResponse);
   };
-const sendRecentSongs = async (recentSongs:any) => {
+  const sendRecentSongs = async (recentSongs: any) => {
     if (!account) return [];
     if (recentSongs && recentSongs[0]) {
-      console.log("addding recentSongs to array")
+      console.log("addding recentSongs to array");
       onPlaySongArray(
         JSON.parse(JSON.stringify(recentSongs[0])).map(
           (song: any) => song.videoLink
@@ -209,6 +298,7 @@ const sendRecentSongs = async (recentSongs:any) => {
       artist_address
     );
     console.log(response2);
+    window.location.reload();
   };
 
   return (
@@ -225,9 +315,7 @@ const sendRecentSongs = async (recentSongs:any) => {
                   JSON.parse(JSON.stringify(topSongs[0])).map((song: any) => {
                     return (
                       <SongCard
-
-                        SongName={song.name.slice(0, 15) +
-                          "...."}
+                        SongName={song.name.slice(0, 15) + "...."}
                         ArtistName={
                           song.artist_address.slice(0, 5) +
                           "...." +
@@ -252,18 +340,15 @@ const sendRecentSongs = async (recentSongs:any) => {
                       />
                     );
                   })}
-                  
+
                 {apimusic.title === "for you" &&
                   randomSongs &&
                   JSON.parse(JSON.stringify(randomSongs[0])).map(
                     (song: any) => {
                       return (
                         <SongCard
-                        SongName={song.name.slice(0, 15) +
-                          "...."}
-                          
-                           
-                            ArtistName={
+                          SongName={song.name.slice(0, 15) + "...."}
+                          ArtistName={
                             song.artist_address.slice(0, 5) +
                             "...." +
                             song.artist_address.substring(
@@ -294,9 +379,8 @@ const sendRecentSongs = async (recentSongs:any) => {
                     (song: any) => {
                       return (
                         <SongCard
-                            SongName={song.name.slice(0, 15) +
-                              "...." }
-                            ArtistName={
+                          SongName={song.name.slice(0, 15) + "...."}
+                          ArtistName={
                             song.artist_address.slice(0, 5) +
                             "...." +
                             song.artist_address.substring(

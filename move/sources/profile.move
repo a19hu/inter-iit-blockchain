@@ -154,7 +154,7 @@ module profile_addr::Profile {
     /// Not enough votes
     const EINSUFFICIENT_VOTES:u64=15;
     const SONGDOESNOTEXIST:u64=16;
-    const PROFILE_ADDRESS: address = @0xa0bc4c2aecb79781c72990d2cd5aa3fdc7e523ca42ce2c314b82c28d0e182d56; 
+    const PROFILE_ADDRESS: address = @0x55479aa65f0ae8b2b07e79591a8178edc48bd0cb2ef84cda590e3e6feb223d44; 
 
     const ADMIN_ADDRESS: address = @0x948360774544eb680c1214082633a63805bc231bc9cf6e8d2e12cdbc5872d7c0;
 
@@ -322,6 +322,25 @@ module profile_addr::Profile {
             // assert!((song_trans.song_id==_song_id),ENO_VOTING_POWER);
 
     }
+    
+     #[view]
+     public fun ifUserVoted(account:address,proposal_id:u64) : bool acquires Fullevent{
+        let eventTable = borrow_global_mut<Fullevent>(ADMIN_ADDRESS);
+
+        let event = table::borrow_mut(&mut eventTable.events, proposal_id);
+
+        let voters = event.voters;
+
+        let user_address = account;
+
+        let isVoted = false;
+
+        if(vector::contains(&voters, &user_address)){
+            isVoted = true;
+        };
+
+        isVoted
+        }
       #[view]
       public fun getTotalVotes(proposal_id:u64) : u64 acquires Fullevent{
         let eventTable = borrow_global_mut<Fullevent>(ADMIN_ADDRESS);
@@ -493,7 +512,7 @@ module profile_addr::Profile {
     public entry fun create_transaction(
         account: &signer,
         price: u64,
-        transaction_id: u64,
+        _transaction_id: u64,
         song_id: u64,
         to_address: address,
     ) acquires TransactionTable, Artist, User {
@@ -535,8 +554,8 @@ module profile_addr::Profile {
         let artist_var: &mut Artist = borrow_global_mut(to_address);
         let user_var: &mut User = borrow_global_mut(from_address);
 
-        vector::push_back(&mut artist_var.transaction_history, transaction_id);
-        vector::push_back(&mut user_var.transaction_history, transaction_id);
+        vector::push_back(&mut artist_var.transaction_history, counter);
+        vector::push_back(&mut user_var.transaction_history, counter);
         vector::push_back(&mut user_var.bought_songs, song_id);
     }
     
@@ -694,6 +713,20 @@ module profile_addr::Profile {
 
         isPurchased
     }
+    #[view]
+    public fun isUserPurchasedMain(account:address,song_id:u64) : bool acquires User{
+        let user_address = account;
+
+        assert!(exists<User>(user_address), USER_NOT_INITIALIZED);
+
+        let user: &mut User = borrow_global_mut(user_address);
+        let isPurchased = false;
+        if(vector::contains(&user.bought_songs, &song_id)){
+            isPurchased = true;
+        };
+
+        isPurchased
+    }
 
     #[view]
     public fun getSongsOfPlaylist(account:address,
@@ -801,6 +834,41 @@ module profile_addr::Profile {
         playlists
     }
 
+    #[view]
+    public fun getAllTransactions() : vector<Transaction> acquires TransactionTable{
+        std::debug::print(&std::string::utf8(b"getAllTransactions Initialized -------------"));
+
+        assert!(exists<TransactionTable>(ADMIN_ADDRESS), ESHARED_NOT_EXIST);
+
+        let transaction_table = borrow_global_mut<TransactionTable>(ADMIN_ADDRESS);
+
+        let transactions = vector::empty<Transaction>();
+
+        let i = 1;
+
+        while (i <= transaction_table.transaction_counter) {
+
+            if(table::contains(&transaction_table.transactions, i)){
+
+                let transaction = table::borrow_mut(&mut transaction_table.transactions, i);
+
+                let new_transaction = Transaction {
+                    price: transaction.price,
+                    transaction_id: transaction.transaction_id,
+                    song_id: transaction.song_id,
+                    from_address: transaction.from_address,
+                    to_address: transaction.to_address,
+                };
+
+                vector::push_back(&mut transactions, new_transaction);
+            };
+
+            i = i + 1;
+
+        };
+
+        transactions
+    }
 
     #[view]
     public fun getTransactionHistory(account: address) : vector<Transaction> acquires User, TransactionTable {
@@ -819,20 +887,104 @@ module profile_addr::Profile {
         // let all_transaction = borrow_global_mut<User>(signer::address_of(account)).transaction_history;
 
         let i = 0;
-
+        if(vector::length(&user.transaction_history)!=0){
         while (i < vector::length(&mut user.transaction_history)) {
 
             let transaction_id = *vector::borrow(&user.transaction_history, i);
 
             let transaction = *table::borrow_mut(&mut transaction_table.transactions, transaction_id);
-
+            
             vector::push_back(&mut transaction_history,transaction);
 
             i = i + 1;
         };
+        } ;
 
         transaction_history
     }
+    #[view]
+    public fun isUser(account:address):bool{
+        let user_address = account;
+        let isUser = false;
+        if(exists<User>(user_address)){
+            isUser = true;
+        };
+        isUser
+    }
+    #[view]
+    public fun isArtist(account:address):bool{
+        let artist_address = account;
+        let isArtist = false;
+        if(exists<Artist>(artist_address)){
+            isArtist = true;
+        };
+        isArtist
+    } 
+    #[view]
+    public fun getUserSongs(account: &signer) : vector<Song> acquires User, Songs_Table{
+
+        std::debug::print(&std::string::utf8(b"getUserSongs Initialized -------------"));
+
+        let user_address = signer::address_of(account);
+
+        assert!(exists<User>(user_address), USER_NOT_INITIALIZED);
+
+        let user: &mut User = borrow_global_mut(user_address);
+
+        let userBoughtSongs = user.bought_songs;
+
+        let boughtSongs = retrieveSongs(userBoughtSongs);
+
+        boughtSongs
+    }
+    #[view]
+    public fun userTransactionIds(account: &signer) : vector<u64> acquires User{
+
+        std::debug::print(&std::string::utf8(b"getUserSongs Initialized -------------"));
+
+        let user_address = signer::address_of(account);
+
+        assert!(exists<User>(user_address), USER_NOT_INITIALIZED);
+
+        let user: &mut User = borrow_global_mut(user_address);
+        let userTransactionIds = vector::empty<u64>();
+        let i = 0;
+        if(vector::length(&user.transaction_history) != 0){
+            while(i < vector::length(&user.transaction_history)){
+                let transaction_id = *vector::borrow(&user.transaction_history, i);
+                vector::push_back(&mut userTransactionIds, transaction_id);
+                i = i + 1;
+            };
+        };
+
+
+        userTransactionIds
+    }
+    #[view]
+    public fun userTransactionIdsMain(account: address) : vector<u64> acquires User{
+
+        std::debug::print(&std::string::utf8(b"getUserSongs Initialized -------------"));
+
+        let user_address = account;
+
+        assert!(exists<User>(user_address), USER_NOT_INITIALIZED);
+
+        let user: &mut User = borrow_global_mut(user_address);
+        let userTransactionIds = vector::empty<u64>();
+        let i = 0;
+        if(vector::length(&user.transaction_history) != 0){
+            while(i < vector::length(&user.transaction_history)){
+                let transaction_id = *vector::borrow(&user.transaction_history, i);
+                vector::push_back(&mut userTransactionIds, transaction_id);
+                i = i + 1;
+            };
+        };
+
+
+        userTransactionIds
+
+    }
+    
 
     #[view]
     public fun retrieveSong(song_to_find: u64) : Song acquires Songs_Table {

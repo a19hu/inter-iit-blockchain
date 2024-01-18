@@ -29,7 +29,12 @@ type Song = {
     genre: String,
     preview_info: [],
 }
-
+type Transaction = {
+    from_address:String,
+    price:BigInteger,
+    song_id:BigInteger,
+    to_address:String,
+}
 type Playlist = {
     playlist_id: BigInteger,
     playlist_name: string,
@@ -49,7 +54,9 @@ const Profile = (props: any) => {
     const [isLikedSongFetched, setIsLikedSongFetched] = useState(false);
     const [isRecentSongFetched, setIsRecentSongFetched] = useState(false);
     const [isTransactionFetched, setIsTransactionFetched] = useState(false);
+ 
     const [isPlaylistFetched, setIsPlaylistFetched] = useState(false);
+    const[trasactionApi,setTransactionApi]=useState<Transaction[]>([]);
     const [likedSongsApi, setLikedSongsApi] = useState<Song[]>([]);
     const [recentSongsApi, setRecentSongsApi] = useState<Song[]>([]);
 
@@ -77,7 +84,7 @@ const Profile = (props: any) => {
         // fetchPlaylists();
         fetchLikedSongs();
         // fetchRecentSongs();
-        // fetchTransactions();
+        fetchTransactions();
     }, [accountHasPlaylist, accountHasUser, isLikedSongFetched, isRecentSongFetched, isTransactionFetched]);
 
     const createUser = async () => {
@@ -100,6 +107,28 @@ const Profile = (props: any) => {
             setAccountHasUser(false);
         }
     }
+    const fetchTransactions = async () => {
+
+        if (!account) return [];
+        const payload:ViewRequest = {
+            function: `${module_address}::Profile::getTransactionHistory`,
+            type_arguments: [],
+            arguments: [account?.address],
+        };
+
+        try {
+            const response = await provider.view(payload);
+            let songDetails = JSON.parse(JSON.stringify(response));
+            setTransactionApi(songDetails[0]);
+
+            // console.log("Transactions");
+            // console.log(songDetails);
+            setIsTransactionFetched(true);
+            return response;
+        } catch (error: any) {
+            console.error("Error getting transactions:", error);
+        }
+    }
     const fetchLikedSongs = async () => {
 
         if (!account) return [];
@@ -114,8 +143,8 @@ const Profile = (props: any) => {
             let songDetails = JSON.parse(JSON.stringify(response));
             setLikedSongsApi(songDetails[0]);
 
-            console.log("Liked Songs");
-            console.log(response);
+            // console.log("Liked Songs");
+            // console.log(response);
             setIsLikedSongFetched(true);
             return response;
         } catch (error: any) {
@@ -146,7 +175,7 @@ const Profile = (props: any) => {
 
     const addNewPlaylist = async () => {
         if (!account) return [];
-        console.log("entered add new playlist", account.address)
+        // console.log("entered add new playlist", account.address)
         const payload = {
             type: "entry_function_payload",
             function: `${module_address}::Profile::create_playlist`,
@@ -155,9 +184,9 @@ const Profile = (props: any) => {
         };
         try {
             // sign and submit transaction to chain
-            console.log("entered try loop", payload)
+            // console.log("entered try loop", payload)
             const response = await signAndSubmitTransaction(payload);
-            console.log("response", response)
+            // console.log("response", response)
             await provider.waitForTransaction(response.hash);
             setAccountHasPlaylist(true);
             console.log("Completed")
@@ -180,7 +209,7 @@ const Profile = (props: any) => {
         };
         try {
             // sign and submit transaction to chain
-            console.log("entered try loop for addLikes", payload)
+            // console.log("entered try loop for addLikes", payload)
             const response = await signAndSubmitTransaction(payload);
             await provider.waitForTransaction(response.hash);
             console.log("Completed")
@@ -199,8 +228,8 @@ const Profile = (props: any) => {
                 account.address,
                 `${module_address}::Profile::Playlists_Table`
             );
-            console.log("Playlists_Table---------------")
-            console.log(Playlists_Table)
+            // console.log("Playlists_Table---------------")
+            // console.log(Playlists_Table)
             // setAccountHasPlaylist(true);
 
             // const tableHandle = (Playlists_Table as any).data.tasks.handle;
@@ -237,7 +266,7 @@ const Profile = (props: any) => {
         const response=await signAndSubmitTransaction(payload);
         await provider.waitForTransaction(response.hash);
 
-        console.log(response);
+        // console.log(response);
         console.log("completed")
     }
     catch(error:any){
@@ -298,10 +327,10 @@ const Profile = (props: any) => {
         return (
 
             <div className='Playlists'>
-                {Transaction.map((apimusic, index) => {
+                {JSON.parse(JSON.stringify(trasactionApi)).map((apimusic:any) => {
                     return (
                         <div className="pc">
-                            <TransactionCard TransactionID={apimusic.Transaction_ID} TransactionDate={apimusic.Transaction_Date} SongName={apimusic.Song_Purchased} />
+                            <TransactionCard TransactionID={apimusic.transaction_id} TransactionDate={apimusic.to_address} SongName={apimusic.song_id} />
                         </div>
                     )
                 })}

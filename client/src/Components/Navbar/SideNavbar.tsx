@@ -37,18 +37,48 @@ const SideNavbar: React.FC<Props> = () => {
   const { account, signAndSubmitTransaction } = useWallet();
   const module_address = process.env.REACT_APP_MODULE_ADDRESS;
 
+const checlISArtist = async () => {
+  if (!account) return [];
+  const payload: ViewRequest = {
+    function: `${module_address}::Profile::isArtist`,
+    type_arguments: [],
+    arguments: [account.address],
+  };
+  try {
+    const response = await provider.view(payload);
+    let isArtist = JSON.parse(JSON.stringify(response));
+    setIsArtist(isArtist[0]);
+    setAccountHasUser(true);
+    if(isArtist[0]) {
+      setShowUpload(true);
+    }
+    else{
+      setShowUpload(false);
+    }
+  } catch (error: any) {
+    setAccountHasUser(false);
+  }
+}
+checlISArtist();
   useEffect(() => {
     fetchPlaylist();
+    checlISArtist();
   },[isCreate]);
 
   useEffect(() => {
     fetchPlaylist();
+    checlISArtist();
   },[]);
+  
 
   const handledisplay =() => {
-    if(!isArtist){
+
+    if(isArtist){
       setShowUpload(true);
+    }
+    else{
       createArtist();
+      setShowUpload(true);
     }
 
   }
@@ -173,7 +203,8 @@ const SideNavbar: React.FC<Props> = () => {
         </div>
       </div>
       <div>
-        <button className="become_artist" onClick={handledisplay}>Become Artist</button>
+        {!isArtist?( <button className="become_artist" onClick={handledisplay}>Become Artist</button>):(null)}
+       
       </div>
     </div>
   );

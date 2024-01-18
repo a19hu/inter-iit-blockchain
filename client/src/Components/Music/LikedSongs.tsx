@@ -23,7 +23,7 @@ const [isLiked , setIsLiked] = useState(false);
 
     {isHovered ? (
       <div className='playlist-image'>
-        <div className="unliked-heart">
+        {/* <div className="unliked-heart">
             {
             !isLiked ? 
             (
@@ -38,8 +38,8 @@ const [isLiked , setIsLiked] = useState(false);
               </div>
             )
             }
-        </div>
-        <img src= {khalasi} alt='song-image' className='card-image' />
+        </div> */}
+        <img src= {PhotoUrl} alt='song-image' className='card-image' />
       <center className="show-button">
         
         <FaPlay className='play-button'/>
@@ -49,17 +49,7 @@ const [isLiked , setIsLiked] = useState(false);
   :(
 
       <div className='playlist-image'>
-        <div className="unliked-heart">
-            {!isLiked ? (<div className="unliked-heart">
-                <FaRegHeart className="heart-unliked" />
-                </div>
-                ) : 
-                (<div className="unliked-heart">
-                <FcLike className="heart-unliked"/>
-                </div>
-            )
-            }
-        </div>
+        {/* <div ccommit -0 */}
         <img src= {PhotoUrl} alt='song-image' className='card-image' />
       </div>
   )}

@@ -22,6 +22,7 @@ const VoteCard: React.FC<VoteCardProps> = ({ proposalID, Reason }) => {
   const [ArtistName, setArtistName] = React.useState("" as string);
   const [SongName, setSongName] = React.useState("" as string);
   const [isDeleted, setIsDeleted] = React.useState(false);
+  const [isVoted, setIsVoted] = React.useState(false);
   const [votesCount, setVotesCount] = React.useState("" as string)
   const { account, signAndSubmitTransaction } = useWallet();
   const module_address = process.env.REACT_APP_MODULE_ADDRESS;
@@ -29,6 +30,7 @@ const VoteCard: React.FC<VoteCardProps> = ({ proposalID, Reason }) => {
   React.useEffect(() => {
     getSongDetails(proposalID);
     getVotesCount(proposalID);
+    checkUserVoted(proposalID);
   }, [proposalID]);
 
   const getSongDetails = async (songID: string) => {
@@ -55,6 +57,22 @@ const VoteCard: React.FC<VoteCardProps> = ({ proposalID, Reason }) => {
       console.error("Error getting song details:", error);
     }
   };
+  const checkUserVoted = async (songID: string) => {
+
+    const payload: ViewRequest = {
+      function: `${module_address}::Profile::ifUserVoted`,
+      type_arguments: [],
+      arguments: [account?.address,songID],
+    };
+    try {
+      const response = await provider.view(payload);
+      const res=JSON.parse(JSON.stringify(response))
+      console.log("User voted");
+      setIsVoted(res[0]);
+    } catch (error: any) {
+      console.error("Error getting user voted:", error);
+    }
+  }
   const voteForSong = async (songID: string) => {
     if (!account) return;
     const payload = {
@@ -69,6 +87,7 @@ const VoteCard: React.FC<VoteCardProps> = ({ proposalID, Reason }) => {
       console.log(response);
       getVotesCount(songID);
       checkEventCompleted(songID);
+      setIsVoted(true);
     } catch (error: any) {
       console.error("Error voting for song:", error);
     }
@@ -154,12 +173,17 @@ const VoteCard: React.FC<VoteCardProps> = ({ proposalID, Reason }) => {
               </div>
             </div>
             <div className="right-side">
-              <button
+              {isVoted ? (
+                <div className="vote-status">Voted</div>
+              ) : (
+                <button
                 onClick={() => voteForSong(proposalID)}
                 className="vote-button"
               >
                 Vote
               </button>
+              )}
+         
             </div>
           </center>
         )

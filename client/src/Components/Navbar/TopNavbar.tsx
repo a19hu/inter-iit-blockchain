@@ -140,7 +140,14 @@ const TopNavbar: React.FC<Props> = () => {
 					</div>
 					
 					<div className="wallet" onClick={(e)=>console.log(e.target)}>
-						<WalletSelector  />
+                    {
+                        account?.address ?
+                        <div onClick={()=>{window.location.reload()}}>
+                            <WalletSelector/>
+                        </div>
+                        :
+                        <WalletSelector/>
+                    }
 					</div>
 				</div>
 			</div>
